@@ -1,6 +1,7 @@
 # MyConfig
 test*.py
 .idea
+files/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
