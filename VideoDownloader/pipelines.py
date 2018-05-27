@@ -20,7 +20,7 @@ class VideoDownloaderPipeline(object):
         "Accept-Encoding": "identity;q=1, *;q=0",
         "Range": None,
         "Referer": None,
-        "Connection": "Close",
+        # "Connection": "Close",
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.59 Safari/537.36 115Browser/8.6.2"
     }
     proxy = {}
@@ -65,9 +65,13 @@ class VideoDownloaderPipeline(object):
         content_length = 1024 * 1024 * 10
         total_length = None
         self.download_header["Referer"] = video_url
-        while True:
-            self.download_header["Range"] = "bytes=%d-%d" % (content_offset, content_offset + content_length)
-            with requests.get(video_url, stream=True, headers=self.download_header, proxies=self.proxy) as resp:
+        with requests.session() as s:
+            s.headers = self.download_header
+            s.proxies = self.proxy
+            s.stream = True
+            while True:
+                s.headers["Range"] = "bytes=%d-%d" % (content_offset, content_offset + content_length)
+                resp = s.get(video_url)
                 if not resp.ok:
                     if resp.status_code == 416:
                         return
@@ -84,9 +88,9 @@ class VideoDownloaderPipeline(object):
                     file.write(resp.content)
                     file.flush()
 
-            content_offset += resp_length
-            if content_offset >= total_length:
-                break
+                content_offset += resp_length
+                if content_offset >= total_length:
+                    break
 
     def get_valid_name(self, expected_file_name, instead_str=' '):
         valid_name = re.compile(r'[/\\:*?"<>|]+').sub(instead_str, expected_file_name)
