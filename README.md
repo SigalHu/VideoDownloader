@@ -13,3 +13,4 @@
 
 * 安装python3.6
 * 需要的模块：scrapy
+* 启动shadowsocks，并设置代理端口为1080

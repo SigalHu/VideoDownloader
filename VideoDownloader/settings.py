@@ -14,11 +14,18 @@ BOT_NAME = 'VideoDownloader'
 SPIDER_MODULES = ['VideoDownloader.spiders']
 NEWSPIDER_MODULE = 'VideoDownloader.spiders'
 
+# 日志设置
 LOG_ENABLED = True
 LOG_ENCODING = 'utf-8'
 LOG_FILE = 'video-downloader.log'
 LOG_STDOUT = False
 LOG_LEVEL = "INFO"
+
+# 代理设置
+PROXY = {
+    'http': 'http://127.0.0.1:1080',
+    'https': 'https://127.0.0.1:1080'
+}
 
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
 #USER_AGENT = 'VideoDownloader (+http://www.yourdomain.com)'
@@ -52,14 +59,15 @@ COOKIES_ENABLED = True
 # Enable or disable spider middlewares
 # See https://doc.scrapy.org/en/latest/topics/spider-middleware.html
 #SPIDER_MIDDLEWARES = {
-#    'VideoDownloader.middlewares.VideodownloaderSpiderMiddleware': 543,
+#    'VideoDownloader.middlewares.VideoDownloaderSpiderMiddleware': 543,
 #}
 
 # Enable or disable downloader middlewares
 # See https://doc.scrapy.org/en/latest/topics/downloader-middleware.html
-#DOWNLOADER_MIDDLEWARES = {
-#    'VideoDownloader.middlewares.VideodownloaderDownloaderMiddleware': 543,
-#}
+DOWNLOADER_MIDDLEWARES = {
+   'VideoDownloader.middlewares.VideoDownloaderDownloaderMiddleware': 543,
+   'VideoDownloader.proxy_middleware.ProxyMiddleware': 1,
+}
 
 # Enable or disable extensions
 # See https://doc.scrapy.org/en/latest/topics/extensions.html

@@ -10,6 +10,7 @@ import re
 from time import sleep
 
 import requests
+from scrapy.utils.project import get_project_settings
 
 from VideoDownloader.spiders.settings import SAVE_PATH
 
@@ -22,6 +23,12 @@ class VideoDownloaderPipeline(object):
         "Connection": "Close",
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.59 Safari/537.36 115Browser/8.6.2"
     }
+    proxy = {}
+
+    def __init__(self):
+        settings = get_project_settings()
+        self.proxy = settings.get("PROXY", {})
+        super().__init__()
 
     def process_item(self, item, spider):
         file_path = item["title"] + "." + item["type"]
@@ -60,7 +67,7 @@ class VideoDownloaderPipeline(object):
         self.download_header["Referer"] = video_url
         while True:
             self.download_header["Range"] = "bytes=%d-%d" % (content_offset, content_offset + content_length)
-            with requests.get(video_url, stream=True, headers=self.download_header) as resp:
+            with requests.get(video_url, stream=True, headers=self.download_header, proxies=self.proxy) as resp:
                 if not resp.ok:
                     if resp.status_code == 416:
                         return
