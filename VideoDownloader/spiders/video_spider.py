@@ -36,7 +36,7 @@ class VideoSpider(CrawlSpider):
 
     def parse_login(self, response):
         try:
-            logging.info("msg=解析登陆页面|url=" + response.url)
+            logging.info("msg=解析登陆页面|url=%s" % response.url)
             form_data = {}
             for each in response.xpath("//form[@class='js-loginForm']/input[@type='hidden']"):
                 key = each.xpath("@name").extract_first()
@@ -54,13 +54,13 @@ class VideoSpider(CrawlSpider):
                                               dont_filter=True,
                                               callback=self.after_login)]
         except Exception as ex:
-            logging.warning("msg=解析登陆页面失败|url=" + response.url + "|ex=" + str(ex))
+            logging.warning("msg=解析登陆页面失败|url=%s|ex=%s" % (response.url, str(ex)))
 
     def after_login(self, response):
-        logging.info("msg=登陆响应|response=" + response.text)
+        logging.info("msg=登陆响应|response=%s" % response.text)
         while self.start_urls:
             url = self.start_urls.pop()
-            logging.info("mag=访问链接|url=" + url)
+            logging.info("mag=访问链接|url=%s" % url)
             if "playlist" in url:
                 yield Request(url=url,
                               meta={"cookiejar": response.meta["cookiejar"]})
@@ -71,7 +71,7 @@ class VideoSpider(CrawlSpider):
 
     def parse_video(self, response):
         try:
-            logging.info("msg=解析页面|url=" + response.url)
+            logging.info("msg=解析页面|url=%s" % response.url)
             video_info = VideoDownloaderItem()
             video_info["title"] = response.xpath(
                 "//div[@class='title-container']/h1[@class='title']/span[@class='inlineFree']/text()").extract_first()
@@ -79,4 +79,4 @@ class VideoSpider(CrawlSpider):
             video_info["type"] = response.xpath("//video[@class='player-html5']/source/@type").extract_first().split("/")[1]
             return video_info
         except Exception as ex:
-            logging.warning("msg=解析页面失败|url=" + response.url + "|ex=" + str(ex))
+            logging.warning("msg=解析页面失败|url=%s|ex=%s" % (response.url, str(ex)))

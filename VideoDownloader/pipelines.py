@@ -7,6 +7,7 @@
 import logging
 import os
 import re
+from time import sleep
 
 import requests
 
@@ -18,6 +19,7 @@ class VideoDownloaderPipeline(object):
         "Accept-Encoding": "identity;q=1, *;q=0",
         "Range": None,
         "Referer": None,
+        "Connection": "Close",
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.59 Safari/537.36 115Browser/8.6.2"
     }
 
@@ -28,40 +30,57 @@ class VideoDownloaderPipeline(object):
             file_path = os.path.join(SAVE_PATH, file_path)
             file_path = os.path.abspath(file_path)
 
-            logging.info("msg=开始下载|path=" + file_path + "|url=" + item["url"])
-            self.download_video(item["url"], file_path)
+            retry_count = 5
+            while retry_count > 0:
+                try:
+                    logging.info("msg=开始下载|retry=%d|path=%s|url=%s" % (retry_count, file_path, item["url"]))
+                    self.download_video(item["url"], file_path)
+                    break
+                except Exception as ex:
+                    logging.warning("msg=下载异常|path=%s|url=%s|ex=%s" % (file_path, item["url"], str(ex)))
+                    retry_count -= 1
+                    sleep(5)
         except Exception as ex:
-            logging.warning("msg=下载失败|path=" + file_path + "|ex=" + str(ex))
+            logging.warning("msg=下载失败|path=%s|ex=%s" % (file_path, str(ex)))
         else:
-            logging.info("msg=下载完成|path=" + file_path)
+            logging.info("msg=下载完成|path=%s" % file_path)
         return item
 
     def download_video(self, video_url, file_name):
-        if os.path.exists(file_name):
-            return
         path = os.path.dirname(file_name)
         if not os.path.exists(path):
             os.mkdir(path)
 
         content_offset = 0
+        if os.path.exists(file_name):
+            content_offset = os.path.getsize(file_name)
+
         content_length = 1024 * 1024 * 10
         total_length = None
         self.download_header["Referer"] = video_url
         while True:
             self.download_header["Range"] = "bytes=%d-%d" % (content_offset, content_offset + content_length)
-            resp = requests.get(video_url, stream=True, headers=self.download_header)
-            resp_length = int(resp.headers["Content-Length"])
-            if total_length is None:
-                total_length = int(resp.headers["Content-Range"].split("/")[1])
+            with requests.get(video_url, stream=True, headers=self.download_header) as resp:
+                if not resp.ok:
+                    if resp.status_code == 416:
+                        return
+                    continue
+                resp_length = int(resp.headers["Content-Length"])
+                resp_range = resp.headers["Content-Range"]
+                if total_length is None:
+                    total_length = int(resp_range.split("/")[1])
+                resp_offset = int(re.compile(r"bytes (\d+)-").findall(resp_range)[0])
+                if resp_offset != content_offset:
+                    continue
 
-            with open(file_name, 'ab') as file:
-                file.write(resp.content)
-                file.flush()
+                with open(file_name, 'ab') as file:
+                    file.write(resp.content)
+                    file.flush()
 
             content_offset += resp_length
             if content_offset >= total_length:
                 break
 
     def get_valid_name(self, expected_file_name, instead_str=' '):
-        valid_name = re.compile(r'[/\\:*?"<>|]').sub(instead_str, expected_file_name)
+        valid_name = re.compile(r'[/\\:*?"<>|]+').sub(instead_str, expected_file_name)
         return valid_name.strip(' ')
