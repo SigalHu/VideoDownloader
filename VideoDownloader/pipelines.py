@@ -71,7 +71,7 @@ class VideoDownloaderPipeline(object):
             s.stream = True
             while True:
                 s.headers["Range"] = "bytes=%d-%d" % (content_offset, content_offset + content_length)
-                resp = s.get(video_url)
+                resp = s.get(video_url, timeout=10)
                 if not resp.ok:
                     if resp.status_code == 416:
                         return
