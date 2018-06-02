@@ -37,20 +37,24 @@ class VideoDownloaderPipeline(object):
             file_path = os.path.join(SAVE_PATH, file_path)
             file_path = os.path.abspath(file_path)
 
-            retry_count = 5
-            while retry_count > 0:
+            retry_count = 0
+            while retry_count < 6:
                 try:
                     logging.info("msg=开始下载|retry=%d|path=%s|url=%s" % (retry_count, file_path, item["url"]))
                     self.download_video(item["url"], file_path)
                     break
                 except Exception as ex:
                     logging.warning("msg=下载异常|path=%s|url=%s|ex=%s" % (file_path, item["url"], str(ex)))
-                    retry_count -= 1
-                    sleep(5)
+                    retry_count += 1
+                    if retry_count < 6:
+                        sleep(2**retry_count)
+            if retry_count == 6:
+                spider.start_urls.append(item["url"])
+                logging.warning("msg=下载失败|path=%s" % file_path)
+            else:
+                logging.info("msg=下载完成|path=%s" % file_path)
         except Exception as ex:
             logging.warning("msg=下载失败|path=%s|ex=%s" % (file_path, str(ex)))
-        else:
-            logging.info("msg=下载完成|path=%s" % file_path)
         return item
 
     def download_video(self, video_url, file_name):
