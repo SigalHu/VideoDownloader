@@ -83,9 +83,9 @@ class VideoDownloadProcessor(FileSystemEventHandler):
             pass
 
     def __stop_scrapy(self, proc):
-        proc.kill()
+        proc.send_signal(signal.SIGKILL)
         while proc.poll() is None:
-            self.__wait_scrapy(proc)
+            self.__wait_scrapy(proc, 10)
 
     def __scrapy_timeout(self) -> bool:
         return time.time() - self.__last_modify_timestamp >= 10 * 60
