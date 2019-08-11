@@ -17,7 +17,7 @@ class VideoDownloadProcessor(FileSystemEventHandler):
         FileSystemEventHandler.__init__(self)
         logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s")
         self._logger = logging.getLogger(self.__class__.__name__)
-        self._create_pid_file()
+        self._create_pid_file(os.path.dirname(__file__))
         self._register_signal()
         self.__last_modify_timestamp = time.time()
         self.__observer = Observer()
@@ -44,9 +44,11 @@ class VideoDownloadProcessor(FileSystemEventHandler):
             f.write("{}\n".format(os.getpid()))
 
     def on_created(self, event):
+        self._logger.info("Received the file system event: created %s", event.src_path)
         self.__last_modify_timestamp = time.time()
 
     def on_modified(self, event):
+        self._logger.info("Received the file system event: modified %s", event.src_path)
         self.__last_modify_timestamp = time.time()
 
     def process(self):
@@ -62,17 +64,21 @@ class VideoDownloadProcessor(FileSystemEventHandler):
     def __run_scrapy(self):
         while True:
             self.__last_modify_timestamp = time.time()
+            self._logger.info("Start to process scrapy!")
             proc = subprocess.Popen(["scrapy", "crawl", VideoSpider.name])
             self.__wait_scrapy(proc, 60)
             if proc.poll() is not None:
+                self._logger.info("Finished to process scrapy, all items have been handled!")
                 break
             try:
                 while proc.poll() is None:
                     if self.__scrapy_timeout():
+                        self._logger.info("Timeout to wait scrapy!")
                         self.__stop_scrapy(proc)
                         break
                     self.__wait_scrapy(proc, 60)
             except:
+                self._logger.exception("Error to process scrapy!")
                 self.__stop_scrapy(proc)
                 break
 
@@ -85,9 +91,11 @@ class VideoDownloadProcessor(FileSystemEventHandler):
             pass
 
     def __stop_scrapy(self, proc):
+        self._logger.info("Start to stop scrapy...")
         proc.send_signal(signal.SIGKILL)
         while proc.poll() is None:
             self.__wait_scrapy(proc, 10)
+        self._logger.info("Succeed to stop scrapy!")
 
     def __scrapy_timeout(self) -> bool:
         return time.time() - self.__last_modify_timestamp >= 10 * 60
