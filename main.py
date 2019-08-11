@@ -79,6 +79,8 @@ class VideoDownloadProcessor(FileSystemEventHandler):
     def __wait_scrapy(self, proc, sec=None):
         try:
             proc.wait(sec)
+        except SignalException as ex:
+            raise ex
         except:
             pass
 
