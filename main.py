@@ -2,24 +2,31 @@ import logging
 import os
 import signal
 import subprocess
+import time
 
-from scrapy import cmdline
-from scrapy.crawler import CrawlerProcess
+from watchdog.events import FileSystemEventHandler
+from watchdog.observers import Observer
 
+from VideoDownloader.spiders import settings
 from VideoDownloader.spiders.video_spider import VideoSpider
 
 
-class VideoDownloadProcessor(object):
+class VideoDownloadProcessor(FileSystemEventHandler):
 
     def __init__(self):
+        FileSystemEventHandler.__init__(self)
         logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s")
         self._logger = logging.getLogger(self.__class__.__name__)
         self._create_pid_file()
         self._register_signal()
+        self.__last_modify_timestamp = time.time_ns()
+        self.__observer = Observer()
 
     def __del__(self):
         if self.__pid_file and os.path.isfile(self.__pid_file):
             os.remove(self.__pid_file)
+        if self.__observer.is_alive():
+            self.__observer.stop()
 
     @staticmethod
     def _register_signal():
@@ -36,14 +43,41 @@ class VideoDownloadProcessor(object):
         with open(self.__pid_file, "w") as f:
             f.write("{}\n".format(os.getpid()))
 
+    def on_created(self, event):
+        self.__last_modify_timestamp = time.time_ns()
+
+    def on_modified(self, event):
+        self.__last_modify_timestamp = time.time_ns()
+
     def process(self):
+        self.__watch_dir()
         self.__run_scrapy()
 
+    def __watch_dir(self):
+        self.__observer.schedule(self, settings.SAVE_PATH, True)
+        self.__observer.start()
+
     def __run_scrapy(self):
-        proc = CrawlerProcess()
-        proc.crawl(VideoSpider)
-        proc.start()
-        print()
+        while True:
+            proc = subprocess.Popen(["scrapy", "crawl", VideoSpider.name])
+            proc.wait(60)
+            if proc.poll() is not None:
+                break
+            try:
+                while proc.poll() is None:
+                    if self.__scrapy_timeout():
+                        self.__last_modify_timestamp = time.time_ns()
+                        proc.terminate()
+                        continue
+                    proc.wait(60)
+            except:
+                proc.kill()
+                while proc.poll() is None:
+                    proc.wait()
+                break
+
+    def __scrapy_timeout(self) -> bool:
+        return time.time_ns() - self.__last_modify_timestamp >= 10 * 60 * 1000
 
 
 class SignalException(Exception):
@@ -51,5 +85,4 @@ class SignalException(Exception):
 
 
 if __name__ == '__main__':
-    # VideoDownloadProcessor().process()
-    cmdline.execute("scrapy crawl video-spider".split())
+    VideoDownloadProcessor().process()
