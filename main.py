@@ -19,7 +19,7 @@ class VideoDownloadProcessor(FileSystemEventHandler):
         self._logger = logging.getLogger(self.__class__.__name__)
         self._create_pid_file()
         self._register_signal()
-        self.__last_modify_timestamp = time.time_ns()
+        self.__last_modify_timestamp = time.time()
         self.__observer = Observer()
 
     def __del__(self):
@@ -44,10 +44,10 @@ class VideoDownloadProcessor(FileSystemEventHandler):
             f.write("{}\n".format(os.getpid()))
 
     def on_created(self, event):
-        self.__last_modify_timestamp = time.time_ns()
+        self.__last_modify_timestamp = time.time()
 
     def on_modified(self, event):
-        self.__last_modify_timestamp = time.time_ns()
+        self.__last_modify_timestamp = time.time()
 
     def process(self):
         self.__watch_dir()
@@ -61,31 +61,34 @@ class VideoDownloadProcessor(FileSystemEventHandler):
 
     def __run_scrapy(self):
         while True:
+            self.__last_modify_timestamp = time.time()
             proc = subprocess.Popen(["scrapy", "crawl", VideoSpider.name])
-            self.__scrapy_wait(proc, 60)
+            self.__wait_scrapy(proc, 60)
             if proc.poll() is not None:
                 break
             try:
                 while proc.poll() is None:
                     if self.__scrapy_timeout():
-                        self.__last_modify_timestamp = time.time_ns()
-                        proc.terminate()
-                        continue
-                    self.__scrapy_wait(proc, 60)
+                        self.__stop_scrapy(proc)
+                        break
+                    self.__wait_scrapy(proc, 60)
             except:
-                proc.kill()
-                while proc.poll() is None:
-                    self.__scrapy_wait(proc)
+                self.__stop_scrapy(proc)
                 break
 
-    def __scrapy_wait(self, proc, sec=None):
+    def __wait_scrapy(self, proc, sec=None):
         try:
             proc.wait(sec)
         except:
             pass
 
+    def __stop_scrapy(self, proc):
+        proc.kill()
+        while proc.poll() is None:
+            self.__wait_scrapy(proc)
+
     def __scrapy_timeout(self) -> bool:
-        return time.time_ns() - self.__last_modify_timestamp >= 10 * 60 * 1000
+        return time.time() - self.__last_modify_timestamp >= 10 * 60
 
 
 class SignalException(Exception):
