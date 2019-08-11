@@ -62,7 +62,7 @@ class VideoDownloadProcessor(FileSystemEventHandler):
     def __run_scrapy(self):
         while True:
             proc = subprocess.Popen(["scrapy", "crawl", VideoSpider.name])
-            proc.wait(60)
+            self.__scrapy_wait(proc, 60)
             if proc.poll() is not None:
                 break
             try:
@@ -71,12 +71,18 @@ class VideoDownloadProcessor(FileSystemEventHandler):
                         self.__last_modify_timestamp = time.time_ns()
                         proc.terminate()
                         continue
-                    proc.wait(60)
+                    self.__scrapy_wait(proc, 60)
             except:
                 proc.kill()
                 while proc.poll() is None:
-                    proc.wait()
+                    self.__scrapy_wait(proc)
                 break
+
+    def __scrapy_wait(self, proc, sec=None):
+        try:
+            proc.wait(sec)
+        except:
+            pass
 
     def __scrapy_timeout(self) -> bool:
         return time.time_ns() - self.__last_modify_timestamp >= 10 * 60 * 1000
