@@ -54,6 +54,8 @@ class VideoDownloadProcessor(FileSystemEventHandler):
         self.__run_scrapy()
 
     def __watch_dir(self):
+        if not os.path.exists(settings.SAVE_PATH):
+            os.makedirs(settings.SAVE_PATH)
         self.__observer.schedule(self, settings.SAVE_PATH, True)
         self.__observer.start()
 
