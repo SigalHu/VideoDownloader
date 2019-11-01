@@ -76,7 +76,7 @@ class VideoSpider(CrawlSpider):
             video_info["title"] = response.xpath(
                 "//div[@class='title-container']/h1[@class='title']/span[@class='inlineFree']/text()").extract_first()
             video_info["url"] = response.xpath(
-                "//div[@class='contentWrapper']/a[@class='downloadBtn greyButton']/@href").extract_first()
+                "//div[@class='video-action-tab download-tab']/div[@class='contentWrapper']/a[@class='downloadBtn greyButton']/@href").extract_first()
             # video_info["url"] = re.compile(r'"videoUrl":"(https.+?)"').findall(response.text)[0].replace("\\", "")
             # video_info["type"] = response.xpath("//video[@class='player-html5']/source/@type").extract_first().split("/")[1]
             video_info["type"] = 'mp4'
