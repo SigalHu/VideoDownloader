@@ -19,5 +19,5 @@ class ProxyMiddleware(object):
                 request.meta['proxy'] = self.proxy.get(key)
             else:
                 logging.info("msg=代理失败|key=%s" % key)
-        except Exception as ex:
-            logging.warning("msg=代理失败|ex=%s" % str(ex))
+        except:
+            logging.exception("msg=代理失败")

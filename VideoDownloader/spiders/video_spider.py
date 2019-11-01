@@ -79,5 +79,5 @@ class VideoSpider(CrawlSpider):
             # video_info["type"] = response.xpath("//video[@class='player-html5']/source/@type").extract_first().split("/")[1]
             video_info["type"] = 'mp4'
             return video_info
-        except Exception as ex:
-            logging.warning("msg=解析页面失败|url=%s|ex=%s" % (response.url, str(ex)))
+        except:
+            logging.exception("msg=解析页面失败|url=%s" % response.url)

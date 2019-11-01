@@ -53,8 +53,8 @@ class VideoDownloaderPipeline(object):
                 logging.warning("msg=下载失败|path=%s" % file_path)
             else:
                 logging.info("msg=下载完成|path=%s" % file_path)
-        except Exception as ex:
-            logging.warning("msg=下载失败|path=%s|ex=%s" % (file_path, str(ex)))
+        except:
+            logging.exception("msg=下载失败|path=%s" % file_path)
         return item
 
     def download_video(self, video_url, file_name):
